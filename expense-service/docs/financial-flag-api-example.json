@@ -1,0 +1,46 @@
+{
+  "payable_request": {
+    "method": "PUT",
+    "url": "/v1/financial-flags/claim-uuid-123/payable",
+    "headers": {
+      "Authorization": "Bearer <token>"
+    },
+    "body": {
+      "status": "PAYMENT_IN_PROCESS",
+      "reason": "Payment run #4502 initiated"
+    }
+  },
+  "payable_paid_request": {
+    "method": "PUT",
+    "url": "/v1/financial-flags/claim-uuid-123/payable",
+    "headers": {
+      "Authorization": "Bearer <token>"
+    },
+    "body": {
+      "status": "PAID",
+      "reason": "Bank transfer confirmed",
+      "paymentReferenceId": "TXN-987654321"
+    }
+  },
+  "billable_request": {
+    "method": "PUT",
+    "url": "/v1/financial-flags/claim-uuid-123/billable",
+    "headers": {
+      "Authorization": "Bearer <token>"
+    },
+    "body": {
+      "status": "INVOICED",
+      "reason": "Monthly client billing completed",
+      "invoiceReferenceId": "INV-2026-005"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "claim-uuid-123",
+      "payableStatus": "PAID",
+      "paymentReferenceId": "TXN-987654321",
+      "lastFlagTransitionAt": "2026-02-25T10:00:00.000Z"
+    }
+  }
+}

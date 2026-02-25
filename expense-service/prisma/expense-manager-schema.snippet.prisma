@@ -1,0 +1,54 @@
+// prisma/schema.prisma (Snippet additions)
+
+model ExpenseClaim {
+  id                      String   @id @default(uuid())
+  tenantId                String   @map("tenant_id")
+  claimNumber             String   @map("claim_number")
+  employeeId              String   @map("employee_id")
+  travelRequestId         String?  @map("travel_request_id")
+  status                  String   @default("DRAFT") // DRAFT, SUBMITTED, MANAGER_APPROVED, FINAL_APPROVED, FINAL_REJECTED
+  version                 Int      @default(1)
+  totalAmountBase         Decimal  @map("total_amount_base") @db.Decimal(10, 2)
+  currency                String
+  
+  // New Fields for Expense Manager Review
+  finalDecisionAt         DateTime? @map("final_decision_at")
+  duplicateDetected       Boolean   @default(false) @map("duplicate_detected")
+  payableOverrideReason   String?   @map("payable_override_reason")
+  billableOverrideReason  String?   @map("billable_override_reason")
+  complianceNotes         String?   @map("compliance_notes")
+  locked                  Boolean   @default(false)
+
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  lineItems               ExpenseClaimLineItem[]
+  auditLogs               ExpenseClaimAudit[]
+  managerAudits           ExpenseManagerAudit[]
+
+  @@unique([tenantId, claimNumber])
+  @@index([tenantId, employeeId])
+  @@index([tenantId, status])
+  @@map("expense_claims")
+}
+
+model ExpenseManagerAudit {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  claimId          String   @map("claim_id")
+  lineItemId       String?  @map("line_item_id")
+  reviewerId       String   @map("reviewer_id")
+  
+  previousPayable  Boolean? @map("previous_payable")
+  newPayable       Boolean? @map("new_payable")
+  previousBillable Boolean? @map("previous_billable")
+  newBillable      Boolean? @map("new_billable")
+  
+  remarks          String?
+  timestamp        DateTime @default(now())
+
+  claim            ExpenseClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, claimId])
+  @@map("expense_manager_audits")
+}

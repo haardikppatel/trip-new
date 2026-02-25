@@ -1,0 +1,45 @@
+{
+  "add_category_request": {
+    "method": "POST",
+    "url": "/v1/config/category",
+    "headers": {
+      "Authorization": "Bearer <token>"
+    },
+    "body": {
+      "name": "Client Meals",
+      "code": "MEALS_CLIENT",
+      "rules": {
+        "requiresReceipt": true,
+        "maxAmountPerClaim": 500,
+        "maxAmountPerDay": 1000,
+        "currencyScope": "GLOBAL",
+        "autoBillable": true,
+        "taxable": false
+      },
+      "active": true
+    }
+  },
+  "set_sla_request": {
+    "method": "POST",
+    "url": "/v1/config/sla",
+    "headers": {
+      "Authorization": "Bearer <token>"
+    },
+    "body": {
+      "managerHours": 48,
+      "financeHours": 72,
+      "payableDays": 5,
+      "escalationRoles": {
+        "manager_timeout": "ExpenseManager",
+        "finance_timeout": "FinanceAdmin"
+      }
+    }
+  },
+  "activate_request": {
+    "method": "POST",
+    "url": "/v1/config/activate/version-uuid-123",
+    "headers": {
+      "Authorization": "Bearer <token>"
+    }
+  }
+}

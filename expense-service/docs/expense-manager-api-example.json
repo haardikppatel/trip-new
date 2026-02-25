@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/v1/expense-manager/claim-uuid-123/approve",
+    "headers": {
+      "Authorization": "Bearer <token>"
+    },
+    "body": {
+      "complianceNotes": "All receipts verified.",
+      "justification": "Duplicate flag was a false positive due to identical amounts on different dates."
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "status": "FINAL_APPROVED"
+    }
+  },
+  "override_request": {
+    "method": "PUT",
+    "url": "/v1/expense-manager/claim-uuid-123/line-items/item-uuid-456/payable",
+    "headers": {
+      "Authorization": "Bearer <token>"
+    },
+    "body": {
+      "newValue": false,
+      "reason": "Alcohol is not a payable expense under current policy."
+    }
+  }
+}

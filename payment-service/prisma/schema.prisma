@@ -1,0 +1,105 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PaymentRunStatus {
+  CREATED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum TransactionStatus {
+  INITIATED
+  SUCCESS
+  FAILED
+}
+
+enum PayableStatus {
+  NOT_ELIGIBLE
+  ELIGIBLE
+  PAYMENT_IN_PROCESS
+  PAID
+  CANCELLED
+}
+
+model PaymentRun {
+  id                String           @id @default(uuid())
+  tenantId          String           @map("tenant_id")
+  runReference      String           @unique @map("run_reference")
+  idempotencyKey    String           @unique @map("idempotency_key")
+  triggeredByUserId String           @map("triggered_by_user_id")
+  status            PaymentRunStatus @default(CREATED)
+  totalAmount       Decimal          @map("total_amount") @db.Decimal(10, 2)
+  totalClaims       Int              @map("total_claims")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  completedAt       DateTime?        @map("completed_at")
+
+  transactions      PaymentTransaction[]
+  audits            PaymentRunAudit[]
+
+  @@index([tenantId, status])
+  @@map("payment_runs")
+}
+
+model PaymentTransaction {
+  id                    String            @id @default(uuid())
+  tenantId              String            @map("tenant_id")
+  claimId               String            @map("claim_id")
+  paymentRunId          String            @map("payment_run_id")
+  externalTransactionId String?           @unique @map("external_transaction_id")
+  amount                Decimal           @db.Decimal(10, 2)
+  currency              String
+  status                TransactionStatus @default(INITIATED)
+  failureReason         String?           @map("failure_reason")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+
+  paymentRun            PaymentRun        @relation(fields: [paymentRunId], references: [id], onDelete: Cascade)
+  claim                 ExpenseClaim      @relation(fields: [claimId], references: [id])
+
+  @@index([tenantId, paymentRunId])
+  @@index([externalTransactionId])
+  @@map("payment_transactions")
+}
+
+model PaymentRunAudit {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  paymentRunId String   @map("payment_run_id")
+  action       String
+  actorId      String   @map("actor_id")
+  details      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  paymentRun   PaymentRun @relation(fields: [paymentRunId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, paymentRunId])
+  @@map("payment_run_audits")
+}
+
+model ExpenseClaim {
+  id                    String        @id @default(uuid())
+  tenantId              String        @map("tenant_id")
+  employeeId            String        @map("employee_id")
+  payableStatus         PayableStatus @default(NOT_ELIGIBLE) @map("payable_status")
+  duplicateDetected     Boolean       @default(false) @map("duplicate_detected")
+  payableOverrideReason String?       @map("payable_override_reason")
+  totalAmountBase       Decimal       @map("total_amount_base") @db.Decimal(10, 2)
+  currency              String
+  paymentRunId          String?       @map("payment_run_id")
+  paidAt                DateTime?     @map("paid_at")
+  version               Int           @default(1)
+
+  transactions          PaymentTransaction[]
+
+  @@index([tenantId, payableStatus])
+  @@map("expense_claims")
+}

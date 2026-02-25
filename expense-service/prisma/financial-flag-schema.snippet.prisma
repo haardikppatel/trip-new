@@ -1,0 +1,75 @@
+// prisma/schema.prisma (Snippet additions)
+
+enum PayableStatus {
+  NOT_ELIGIBLE
+  ELIGIBLE
+  PAYMENT_IN_PROCESS
+  PAID
+  CANCELLED
+}
+
+enum BillableStatus {
+  NOT_BILLABLE
+  BILLABLE
+  INVOICE_GENERATED
+  INVOICED
+  WRITTEN_OFF
+}
+
+model ExpenseClaim {
+  id                      String   @id @default(uuid())
+  tenantId                String   @map("tenant_id")
+  claimNumber             String   @map("claim_number")
+  employeeId              String   @map("employee_id")
+  travelRequestId         String?  @map("travel_request_id")
+  status                  String   @default("DRAFT")
+  version                 Int      @default(1)
+  totalAmountBase         Decimal  @map("total_amount_base") @db.Decimal(10, 2)
+  currency                String
+  
+  finalDecisionAt         DateTime? @map("final_decision_at")
+  duplicateDetected       Boolean   @default(false) @map("duplicate_detected")
+  payableOverrideReason   String?   @map("payable_override_reason")
+  billableOverrideReason  String?   @map("billable_override_reason")
+  complianceNotes         String?   @map("compliance_notes")
+  locked                  Boolean   @default(false)
+
+  // Financial Flag Lifecycle Additions
+  payableStatus           PayableStatus  @default(NOT_ELIGIBLE) @map("payable_status")
+  billableStatus          BillableStatus @default(NOT_BILLABLE) @map("billable_status")
+  paymentReferenceId      String?        @map("payment_reference_id")
+  invoiceReferenceId      String?        @map("invoice_reference_id")
+  lastFlagTransitionAt    DateTime?      @map("last_flag_transition_at")
+
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  lineItems               ExpenseClaimLineItem[]
+  auditLogs               ExpenseClaimAudit[]
+  managerAudits           ExpenseManagerAudit[]
+  financialFlagAudits     FinancialFlagAudit[]
+
+  @@unique([tenantId, claimNumber])
+  @@index([tenantId, employeeId])
+  @@index([tenantId, status])
+  @@index([tenantId, payableStatus])
+  @@map("expense_claims")
+}
+
+model FinancialFlagAudit {
+  id                  String   @id @default(uuid())
+  claimId             String   @map("claim_id")
+  tenantId            String   @map("tenant_id")
+  oldPayableStatus    String?  @map("old_payable_status")
+  newPayableStatus    String?  @map("new_payable_status")
+  oldBillableStatus   String?  @map("old_billable_status")
+  newBillableStatus   String?  @map("new_billable_status")
+  transitionReason    String   @map("transition_reason")
+  triggeredByUserId   String   @map("triggered_by_user_id")
+  timestamp           DateTime @default(now())
+
+  claim               ExpenseClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, claimId])
+  @@map("financial_flag_audits")
+}

@@ -1,0 +1,38 @@
+{
+  "trigger_run_request": {
+    "method": "POST",
+    "url": "/v1/payments/run",
+    "headers": {
+      "Authorization": "Bearer <token>"
+    },
+    "body": {
+      "idempotencyKey": "idem-key-2026-02-25-001"
+    }
+  },
+  "trigger_run_response": {
+    "status": 201,
+    "body": {
+      "id": "run-uuid-123",
+      "tenantId": "tenant-1",
+      "runReference": "PR-1708850000000",
+      "status": "PROCESSING",
+      "totalAmount": 4500.50,
+      "totalClaims": 12
+    }
+  },
+  "callback_request": {
+    "method": "POST",
+    "url": "/v1/payments/callback",
+    "headers": {
+      "x-tenant-id": "tenant-1",
+      "x-signature": "valid-signature"
+    },
+    "body": {
+      "externalTransactionId": "ext-txn-abc-123",
+      "claimId": "claim-uuid-456",
+      "status": "SUCCESS",
+      "amount": 150.00,
+      "currency": "USD"
+    }
+  }
+}

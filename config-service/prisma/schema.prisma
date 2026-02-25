@@ -1,0 +1,135 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ConfigStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model ConfigVersion {
+  id            String       @id @default(uuid())
+  tenantId      String       @map("tenant_id")
+  versionNumber Int          @map("version_number")
+  status        ConfigStatus @default(DRAFT)
+  activatedAt   DateTime?    @map("activated_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  categories    ExpenseCategory[]
+  policies      PolicyRule[]
+  slaConfig     SLAConfig?
+  duplicateConf DuplicateConfig?
+  billingConf   BillingConfig?
+  paymentConf   PaymentConfig?
+  audits        ConfigAudit[]
+
+  @@unique([tenantId, versionNumber])
+  @@index([tenantId, status])
+  @@map("config_versions")
+}
+
+model ExpenseCategory {
+  id              String        @id @default(uuid())
+  versionId       String        @map("version_id")
+  tenantId        String        @map("tenant_id")
+  name            String
+  code            String
+  rules           Json
+  active          Boolean       @default(true)
+
+  version         ConfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, versionId])
+  @@map("expense_categories")
+}
+
+model PolicyRule {
+  id              String        @id @default(uuid())
+  versionId       String        @map("version_id")
+  tenantId        String        @map("tenant_id")
+  ruleType        String        @map("rule_type")
+  ruleConfig      Json          @map("rule_config")
+
+  version         ConfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, versionId])
+  @@map("policy_rules")
+}
+
+model SLAConfig {
+  id              String        @id @default(uuid())
+  versionId       String        @unique @map("version_id")
+  tenantId        String        @map("tenant_id")
+  managerHours    Int           @map("manager_hours")
+  financeHours    Int           @map("finance_hours")
+  payableDays     Int           @map("payable_days")
+  escalationRoles Json          @map("escalation_roles")
+
+  version         ConfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("sla_configs")
+}
+
+model DuplicateConfig {
+  id              String        @id @default(uuid())
+  versionId       String        @unique @map("version_id")
+  tenantId        String        @map("tenant_id")
+  threshold       Int
+  ruleWeights     Json          @map("rule_weights")
+
+  version         ConfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("duplicate_configs")
+}
+
+model BillingConfig {
+  id              String        @id @default(uuid())
+  versionId       String        @unique @map("version_id")
+  tenantId        String        @map("tenant_id")
+  taxPercentage   Decimal       @map("tax_percentage") @db.Decimal(5, 2)
+  billingCycle    String        @map("billing_cycle")
+  invoicePrefix   String        @map("invoice_prefix")
+
+  version         ConfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("billing_configs")
+}
+
+model PaymentConfig {
+  id              String        @id @default(uuid())
+  versionId       String        @unique @map("version_id")
+  tenantId        String        @map("tenant_id")
+  autoSchedule    String        @map("auto_schedule")
+  retryAttempts   Int           @map("retry_attempts")
+  backoffStrategy String        @map("backoff_strategy")
+
+  version         ConfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("payment_configs")
+}
+
+model ConfigAudit {
+  id              String        @id @default(uuid())
+  versionId       String        @map("version_id")
+  tenantId        String        @map("tenant_id")
+  changeType      String        @map("change_type")
+  changedBy       String        @map("changed_by")
+  timestamp       DateTime      @default(now())
+
+  version         ConfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, versionId])
+  @@map("config_audits")
+}

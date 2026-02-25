@@ -1,0 +1,73 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model DuplicateEvaluation {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  claimId          String   @map("claim_id")
+  riskScore        Int      @map("risk_score")
+  duplicateDetected Boolean @map("duplicate_detected")
+  triggeredRules   Json     @map("triggered_rules")
+  evaluatedAt      DateTime @default(now()) @map("evaluated_at")
+
+  @@unique([tenantId, claimId])
+  @@index([tenantId, evaluatedAt])
+  @@map("duplicate_evaluations")
+}
+
+model DuplicateRuleConfig {
+  id          String   @id @default(uuid())
+  tenantId    String?  @map("tenant_id") // Nullable for global defaults
+  ruleName    String   @map("rule_name")
+  weight      Int
+  active      Boolean  @default(true)
+  threshold   Int?     // Only used for the 'GLOBAL_THRESHOLD' rule
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, ruleName])
+  @@map("duplicate_rule_configs")
+}
+
+model DuplicateConfigAudit {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  actorId     String   @map("actor_id")
+  ruleName    String   @map("rule_name")
+  oldWeight   Int?     @map("old_weight")
+  newWeight   Int?     @map("new_weight")
+  oldActive   Boolean? @map("old_active")
+  newActive   Boolean? @map("new_active")
+  timestamp   DateTime @default(now())
+
+  @@index([tenantId, timestamp])
+  @@map("duplicate_config_audits")
+}
+
+// Mock of ExpenseClaim for local DB reference (if shared DB, this extends the existing model)
+model ExpenseClaim {
+  id                   String   @id @default(uuid())
+  tenantId             String   @map("tenant_id")
+  employeeId           String   @map("employee_id")
+  amount               Decimal  @db.Decimal(10, 2)
+  currency             String
+  expenseDate          DateTime @map("expense_date")
+  merchantName         String?  @map("merchant_name")
+  description          String?
+  receiptHash          String?  @map("receipt_hash")
+  attachmentFilename   String?  @map("attachment_filename")
+  
+  duplicateRiskScore   Int?     @map("duplicate_risk_score")
+  duplicateDetected    Boolean  @default(false) @map("duplicate_detected")
+  duplicateEvaluatedAt DateTime? @map("duplicate_evaluated_at")
+
+  @@index([tenantId, employeeId])
+  @@map("expense_claims")
+}
