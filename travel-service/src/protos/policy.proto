@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package policy;
+
+service PolicyService {
+  rpc ValidateTravelPolicy (PolicyValidationRequest) returns (PolicyValidationResponse);
+}
+
+message PolicyValidationRequest {
+  string tenantId = 1;
+  string userId = 2;
+  string destination = 3;
+  double estimatedCost = 4;
+  string currency = 5;
+}
+
+message PolicyValidationResponse {
+  bool isValid = 1;
+  repeated string violations = 2;
+  string snapshotId = 3;
+}

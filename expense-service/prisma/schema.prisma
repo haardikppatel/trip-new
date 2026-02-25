@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Expense {
+  id              String                @id @default(uuid())
+  tenantId        String                @map("tenant_id")
+  userId          String                @map("user_id")
+  travelRequestId String?               @map("travel_request_id")
+  status          ExpenseStatus         @default(DRAFT)
+  totalAmount     Decimal               @map("total_amount") @db.Decimal(10, 2)
+  currency        String                @default("USD")
+  idempotencyKey  String?               @unique @map("idempotency_key")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  lineItems       ExpenseLineItem[]
+  approvalSteps   ExpenseApprovalStep[]
+  auditLogs       ExpenseAuditLog[]
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("expenses")
+}
+
+model ExpenseLineItem {
+  id              String           @id @default(uuid())
+  expenseId       String           @map("expense_id")
+  tenantId        String           @map("tenant_id")
+  category        String
+  amount          Decimal          @db.Decimal(10, 2)
+  date            DateTime
+  description     String?
+
+  expense         Expense          @relation(fields: [expenseId], references: [id])
+  receipts        ReceiptMetadata[]
+
+  @@index([expenseId])
+  @@index([tenantId])
+  @@map("expense_line_items")
+}
+
+model ReceiptMetadata {
+  id                String          @id @default(uuid())
+  expenseLineItemId String          @map("expense_line_item_id")
+  tenantId          String          @map("tenant_id")
+  fileUrl           String          @map("file_url")
+  mimeType          String          @map("mime_type")
+  fileSize          Int             @map("file_size")
+  uploadedAt        DateTime        @default(now()) @map("uploaded_at")
+
+  lineItem          ExpenseLineItem @relation(fields: [expenseLineItemId], references: [id])
+
+  @@index([expenseLineItemId])
+  @@index([tenantId])
+  @@map("receipt_metadata")
+}
+
+model ExpenseApprovalStep {
+  id          String   @id @default(uuid())
+  expenseId   String   @map("expense_id")
+  tenantId    String   @map("tenant_id")
+  approverId  String   @map("approver_id")
+  role        String
+  status      String   @default("PENDING")
+  comments    String?
+  decidedAt   DateTime? @map("decided_at")
+
+  expense     Expense  @relation(fields: [expenseId], references: [id])
+
+  @@index([expenseId])
+  @@index([tenantId])
+  @@map("expense_approval_steps")
+}
+
+model ExpenseAuditLog {
+  id          String   @id @default(uuid())
+  expenseId   String   @map("expense_id")
+  tenantId    String   @map("tenant_id")
+  actorId     String   @map("actor_id")
+  action      String
+  beforeState Json?    @map("before_state")
+  afterState  Json?    @map("after_state")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  expense     Expense  @relation(fields: [expenseId], references: [id])
+
+  @@index([expenseId])
+  @@index([tenantId])
+  @@map("expense_audit_logs")
+}
+
+enum ExpenseStatus {
+  DRAFT
+  SUBMITTED
+  MANAGER_APPROVED
+  FINANCE_APPROVED
+  REJECTED
+  REIMBURSEMENT_INITIATED
+}
